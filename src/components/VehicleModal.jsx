@@ -1,13 +1,14 @@
-import { useState, useEffect } from 'react';
-import { 
-  Dialog, 
-  DialogTitle, 
-  DialogContent, 
-  DialogActions, 
-  TextField, 
-  Button, 
-  MenuItem, 
+import { useState, useEffect, useRef } from 'react';
+import {
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  Button,
+  MenuItem,
   Box,
+  Typography,
   useMediaQuery,
   useTheme
 } from '@mui/material';
@@ -20,6 +21,7 @@ export default function VehicleModal({ open, onClose, onVehicleSaved, vehicleToE
   const { user } = useAuth();
   const theme = useTheme();
   const fullScreen = useMediaQuery(theme.breakpoints.down('sm'));
+  const colorInputRef = useRef(null);
 
   const [formData, setFormData] = useState({
     type: 'Auto',
@@ -27,6 +29,7 @@ export default function VehicleModal({ open, onClose, onVehicleSaved, vehicleToE
     brand_model: '',
     plate_number: '',
     inspection_date: null,
+    color: '#000000',
   });
 
   const [loading, setLoading] = useState(false);
@@ -39,6 +42,7 @@ export default function VehicleModal({ open, onClose, onVehicleSaved, vehicleToE
         brand_model: vehicleToEdit.brand_model,
         plate_number: vehicleToEdit.plate_number,
         inspection_date: vehicleToEdit.inspection_date ? parseISO(vehicleToEdit.inspection_date) : null,
+        color: vehicleToEdit.color || '#000000',
       });
     } else {
       setFormData({
@@ -47,6 +51,7 @@ export default function VehicleModal({ open, onClose, onVehicleSaved, vehicleToE
         brand_model: '',
         plate_number: '',
         inspection_date: null,
+        color: '#000000',
       });
     }
   }, [vehicleToEdit, open]);
@@ -88,16 +93,16 @@ export default function VehicleModal({ open, onClose, onVehicleSaved, vehicleToE
         payload.belt_interval_months = 0;
       }
 
-      const { data, error } = vehicleToEdit 
+      const { data, error } = vehicleToEdit
         ? await supabase
-            .from('vehicles')
-            .update(payload)
-            .eq('id', vehicleToEdit.id)
-            .select()
+          .from('vehicles')
+          .update(payload)
+          .eq('id', vehicleToEdit.id)
+          .select()
         : await supabase
-            .from('vehicles')
-            .insert([payload])
-            .select();
+          .from('vehicles')
+          .insert([payload])
+          .select();
 
       if (error) throw error;
       if (onVehicleSaved) onVehicleSaved(data[0]);
@@ -166,6 +171,60 @@ export default function VehicleModal({ open, onClose, onVehicleSaved, vehicleToE
             onChange={handleChange}
             sx={{ mt: 2 }}
           />
+
+          <Box
+            onClick={() => colorInputRef.current?.click()}
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              mt: 2,
+              p: '10px 14px',
+              border: '1px solid rgba(0, 0, 0, 0.23)',
+              borderRadius: 1,
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+              '&:hover': {
+                borderColor: 'rgba(0, 0, 0, 0.87)',
+                bgcolor: 'rgba(0, 0, 0, 0.02)'
+              }
+            }}
+          >
+            <Typography variant="body1" color="text.secondary">Izvēlēties krāsu...</Typography>
+            <Box
+              component="input"
+              type="color"
+              name="color"
+              ref={colorInputRef}
+              value={formData.color}
+              onChange={handleChange}
+              onClick={(e) => e.stopPropagation()}
+              sx={{
+                width: 32,
+                height: 32,
+                padding: 0,
+                border: '2px solid white',
+                boxShadow: '0 0 0 1px rgba(0,0,0,0.1), 0 2px 4px rgba(0,0,0,0.15)',
+                borderRadius: '50%',
+                cursor: 'pointer',
+                WebkitAppearance: 'none',
+                appearance: 'none',
+                '&::-webkit-color-swatch-wrapper': {
+                  padding: 0
+                },
+                '&::-webkit-color-swatch': {
+                  border: 'none',
+                  borderRadius: '50%'
+                },
+                '&::-moz-color-swatch': {
+                  border: 'none',
+                  borderRadius: '50%'
+                }
+              }}
+            />
+          </Box>
+
+
 
 
 

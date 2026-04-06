@@ -1,18 +1,18 @@
 import { useState, useEffect } from 'react';
 import { format, differenceInDays } from 'date-fns';
-import { 
-  Container, 
-  Typography, 
-  Box, 
-  Button, 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableContainer, 
-  TableHead, 
-  TableRow, 
-  Paper, 
-  useMediaQuery, 
+import {
+  Container,
+  Typography,
+  Box,
+  Button,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  useMediaQuery,
   useTheme,
   Card,
   CardContent,
@@ -121,7 +121,28 @@ export default function Dashboard() {
             const driveType = v.engine_drive_type || 'Zobsiksna';
             return (
               <Grid item xs={12} key={v.id}>
-                <Card onClick={() => handleRowClick(v.id)} sx={{ cursor: 'pointer' }}>
+                <Card
+                  onClick={() => handleRowClick(v.id)}
+                  sx={{
+                    cursor: 'pointer',
+                    position: 'relative',
+                    pl: v.color ? '6px' : 0, // Padding for the strip
+                    overflow: 'hidden'
+                  }}
+                >
+                  {v.color && (
+                    <Box
+                      sx={{
+                        width: '6px',
+                        height: '100%',
+                        position: 'absolute',
+                        left: 0,
+                        top: 0,
+                        bgcolor: v.color,
+                        zIndex: 1
+                      }}
+                    />
+                  )}
                   <CardContent>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                       <Box>
@@ -186,13 +207,29 @@ export default function Dashboard() {
               const metrics = calculateMetrics(v, v.service_logs);
               const driveType = v.engine_drive_type || 'Zobsiksna';
               return (
-                <TableRow 
-                  key={v.id} 
-                  hover 
+                <TableRow
+                  key={v.id}
+                  hover
                   onClick={() => handleRowClick(v.id)}
-                  sx={{ cursor: 'pointer', '&:last-child td, &:last-child th': { border: 0 } }}
+                  sx={{
+                    cursor: 'pointer',
+                    '&:last-child td, &:last-child th': { border: 0 }
+                  }}
                 >
-                  <TableCell>
+                  <TableCell sx={{ position: 'relative', pl: v.color ? 4 : 2 }}>
+                    {v.color && (
+                      <Box
+                        sx={{
+                          width: '6px',
+                          height: '100%',
+                          position: 'absolute',
+                          left: 0,
+                          top: 0,
+                          bgcolor: v.color,
+                          zIndex: 1
+                        }}
+                      />
+                    )}
                     <Typography fontWeight="bold" color="primary">{v.plate_number}</Typography>
                     <Typography variant="body2" color="text.secondary">{v.brand_model}</Typography>
                   </TableCell>
@@ -211,24 +248,24 @@ export default function Dashboard() {
                     {v.inspection_date ? format(new Date(v.inspection_date), 'dd/MM/yyyy') : 'Nav datu'}
                   </TableCell>
                   <TableCell align="right">
-                    <Box sx={{ 
-                      display: 'flex', 
-                      flexDirection: 'row', 
-                      justifyContent: 'center', 
-                      alignItems: 'center', 
+                    <Box sx={{
+                      display: 'flex',
+                      flexDirection: 'row',
+                      justifyContent: 'center',
+                      alignItems: 'center',
                       flexWrap: 'nowrap',
                       gap: 1
                     }}>
-                      <IconButton 
-                        size="small" 
-                        color="primary" 
+                      <IconButton
+                        size="small"
+                        color="primary"
                         onClick={(e) => handleEditClick(e, v)}
                       >
                         <EditIcon fontSize="small" />
                       </IconButton>
-                      <IconButton 
-                        size="small" 
-                        color="error" 
+                      <IconButton
+                        size="small"
+                        color="error"
                         onClick={(e) => handleDeleteClick(e, v)}
                       >
                         <DeleteIcon fontSize="small" />
@@ -253,8 +290,8 @@ export default function Dashboard() {
         <Typography variant="h4" component="h1" fontWeight="bold">
           Mani transportlīdzekļi
         </Typography>
-        <Button 
-          variant="contained" 
+        <Button
+          variant="contained"
           startIcon={<AddIcon />}
           onClick={handleAddClick}
         >
@@ -282,8 +319,8 @@ export default function Dashboard() {
         </>
       )}
 
-      <VehicleModal 
-        open={addModalOpen} 
+      <VehicleModal
+        open={addModalOpen}
         onClose={() => {
           setAddModalOpen(false);
           setVehicleToEdit(null);
