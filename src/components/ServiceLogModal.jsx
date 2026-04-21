@@ -257,11 +257,11 @@ export default function ServiceLogModal({ open, onClose, vehicle, existingLog, l
           // Client-side compression
           try {
             const options = {
-              maxSizeMB: 0.3,
-              maxWidthOrHeight: 1024, // Aggressively scale down the 4K resolution
-              useWebWorker: false,
-              initialQuality: 0.6, // Start at 60% quality
-              alwaysKeepResolution: false, // CRITICAL: Ensure the library is allowed to resize the image
+              maxSizeMB: 0.45, // Target safely under 500KB
+              maxWidthOrHeight: 1920, // Restore crispness (Full HD)
+              initialQuality: 0.8, // Increase starting quality to 80% to remove grain
+              useWebWorker: false, // CRITICAL: Keep this false to prevent the fallback bug
+              alwaysKeepResolution: false,
               fileType: 'image/jpeg'
             };
             const compressedBlob = await imageCompression(originalFile, options);
