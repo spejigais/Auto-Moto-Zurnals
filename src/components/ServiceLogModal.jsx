@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
-import { 
-  Dialog, 
-  DialogTitle, 
-  DialogContent, 
-  DialogActions, 
-  TextField, 
-  Button, 
+import {
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  Button,
   Box,
   FormControlLabel,
   Checkbox,
@@ -23,6 +23,8 @@ import { PhotoCamera, Delete as DeleteIcon, InfoOutlined } from '@mui/icons-mate
 import { supabase } from '../lib/supabase';
 import { parseISO, format } from 'date-fns';
 import { getMaintenanceHint } from '../utils/maintenanceHints';
+import imageCompression from 'browser-image-compression';
+
 
 export default function ServiceLogModal({ open, onClose, vehicle, existingLog, logs = [], onSaved }) {
   const theme = useTheme();
@@ -150,7 +152,7 @@ export default function ServiceLogModal({ open, onClose, vehicle, existingLog, l
 
   const handleFileChange = (e) => {
     const files = Array.from(e.target.files);
-    
+
     // Limits: Max 5 files total (existing + new)
     if (files.length + selectedFiles.length + (formData.image_paths?.length || 0) > 5) {
       setError("Var pievienot ne vairāk kā 5 attēlus.");
@@ -162,7 +164,7 @@ export default function ServiceLogModal({ open, onClose, vehicle, existingLog, l
 
     for (const file of files) {
       // Limit: 10MB each
-      if (file.size > 10 * 1024 * 1024) {
+      if (file.size > 20 * 1024 * 1024) {
         setError(`Fails ${file.name} pārsniedz 10MB limitu.`);
         continue;
       }
@@ -185,7 +187,7 @@ export default function ServiceLogModal({ open, onClose, vehicle, existingLog, l
         const { error: storageError } = await supabase.storage
           .from('receipts')
           .remove([pathToRemove]);
-        
+
         if (storageError) throw storageError;
 
         setFormData(prev => ({
@@ -203,7 +205,7 @@ export default function ServiceLogModal({ open, onClose, vehicle, existingLog, l
       // Adjust index for newly selected files
       const existingFilesCount = formData.image_paths?.length || 0;
       const realIndex = index - existingFilesCount;
-      
+
       setSelectedFiles(prev => prev.filter((_, i) => i !== realIndex));
       setPreviews(prev => prev.filter((_, i) => i !== index));
     }
@@ -222,7 +224,7 @@ export default function ServiceLogModal({ open, onClose, vehicle, existingLog, l
 
       if (logs.length > 0) {
         const otherLogs = existingLog ? logs.filter(l => l.id !== existingLog.id) : logs;
-        
+
         const priorLogs = otherLogs
           .filter(l => l.date <= newDateStr)
           .sort((a, b) => new Date(b.date) - new Date(a.date) || b.mileage - a.mileage);
@@ -244,19 +246,44 @@ export default function ServiceLogModal({ open, onClose, vehicle, existingLog, l
 
       // 2. Image Logic (Skip if zero images)
       let uploadedPaths = [...(formData.image_paths || [])];
-      
+
       if (selectedFiles.length > 0) {
         setUploading(true);
         const { data: { user } } = await supabase.auth.getUser();
 
-        for (const file of selectedFiles) {
-          const fileExt = file.name.split('.').pop();
+        for (const originalFile of selectedFiles) {
+          let fileToUpload = originalFile;
+
+          // Client-side compression
+          try {
+            const options = {
+              maxSizeMB: 0.3,
+              maxWidthOrHeight: 1024, // Aggressively scale down the 4K resolution
+              useWebWorker: false,
+              initialQuality: 0.6, // Start at 60% quality
+              alwaysKeepResolution: false, // CRITICAL: Ensure the library is allowed to resize the image
+              fileType: 'image/jpeg'
+            };
+            const compressedBlob = await imageCompression(originalFile, options);
+
+            // Create a new File from the compressed Blob
+            // We force .jpg extension because we forced image/jpeg type
+            const newFileName = originalFile.name.replace(/\.[^/.]+$/, "") + ".jpg";
+            fileToUpload = new File([compressedBlob], newFileName, { type: 'image/jpeg' });
+
+            console.log('Uploading compressed file size:', fileToUpload.size / 1024 / 1024, 'MB');
+          } catch (compressErr) {
+            console.error('Image compression failed:', compressErr);
+            throw new Error(`Neizdevās saspiest attēlu: ${originalFile.name}`);
+          }
+
+          const fileExt = fileToUpload.name.split('.').pop();
           const fileName = `${Math.random().toString(36).substring(2)}_${Date.now()}.${fileExt}`;
           const filePath = `${user.id}/${vehicle.id}/${fileName}`;
 
           const { error: uploadError, data } = await supabase.storage
             .from('receipts')
-            .upload(filePath, file);
+            .upload(filePath, fileToUpload);
 
           if (uploadError) throw uploadError;
           uploadedPaths.push(data.path);
@@ -282,7 +309,7 @@ export default function ServiceLogModal({ open, onClose, vehicle, existingLog, l
         .from('vehicles')
         .update(vehiclePayload)
         .eq('id', vehicle.id);
-      
+
       if (vError) throw vError;
 
       const logPayload = {
@@ -424,9 +451,9 @@ export default function ServiceLogModal({ open, onClose, vehicle, existingLog, l
               ref={fileInputRef}
               onChange={handleFileChange}
             />
-            <Button 
-              variant="outlined" 
-              startIcon={<PhotoCamera />} 
+            <Button
+              variant="outlined"
+              startIcon={<PhotoCamera />}
               onClick={() => fileInputRef.current?.click()}
               disabled={loading || uploading || previews.length >= 5}
               fullWidth
@@ -439,16 +466,16 @@ export default function ServiceLogModal({ open, onClose, vehicle, existingLog, l
               <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 1 }}>
                 {previews.map((src, index) => (
                   <Box key={index} sx={{ position: 'relative', width: 80, height: 80 }}>
-                    <img 
-                      src={src} 
-                      alt={`Preview ${index}`} 
-                      style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 4 }} 
+                    <img
+                      src={src}
+                      alt={`Preview ${index}`}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 4 }}
                     />
-                    <IconButton 
-                      size="small" 
+                    <IconButton
+                      size="small"
                       onClick={() => removeFile(index, index < (formData.image_paths?.length || 0))}
-                      sx={{ 
-                        position: 'absolute', top: -8, right: -8, 
+                      sx={{
+                        position: 'absolute', top: -8, right: -8,
                         bgcolor: 'background.paper', boxShadow: 1,
                         '&:hover': { bgcolor: '#f5f5f5' }
                       }}
@@ -459,7 +486,7 @@ export default function ServiceLogModal({ open, onClose, vehicle, existingLog, l
                 ))}
               </Box>
             )}
-            
+
             {(loading || uploading) && (
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
                 <CircularProgress size={20} />
@@ -485,9 +512,9 @@ export default function ServiceLogModal({ open, onClose, vehicle, existingLog, l
                 label={<LabelWithHint text="Eļļas maiņa" itemKey="is_oil_changed" />}
               />
               {formData.is_oil_changed && (
-                <Box sx={{ 
-                  ml: 4, mt: 1, mb: 2, p: 2, 
-                  bgcolor: 'rgba(0, 51, 20, 0.04)', 
+                <Box sx={{
+                  ml: 4, mt: 1, mb: 2, p: 2,
+                  bgcolor: 'rgba(0, 51, 20, 0.04)',
                   borderRadius: 1,
                   borderLeft: '3px solid',
                   borderColor: 'primary.main'
@@ -536,20 +563,20 @@ export default function ServiceLogModal({ open, onClose, vehicle, existingLog, l
                 }
                 label={(() => {
                   const labels = {
-                    'Zobsiksna':        'Zobsiksnas maiņa',
-                    'Dzinēja ķēde':     'Dzinēja ķēdes maiņa',
-                    'Piedziņas ķēde':   'Piedziņas ķēdes maiņa',
+                    'Zobsiksna': 'Zobsiksnas maiņa',
+                    'Dzinēja ķēde': 'Dzinēja ķēdes maiņa',
+                    'Piedziņas ķēde': 'Piedziņas ķēdes maiņa',
                     'Piedziņas siksna': 'Piedziņas siksnas maiņa',
-                    'Kardāns':          'Kardāna eļļas maiņa',
+                    'Kardāns': 'Kardāna eļļas maiņa',
                   };
                   const text = labels[vehicle?.engine_drive_type] ?? 'Piedziņas maiņa';
                   return <LabelWithHint text={text} itemKey="is_belt_changed" />;
                 })()}
               />
               {formData.is_belt_changed && (
-                <Box sx={{ 
-                  ml: 4, mt: 1, mb: 2, p: 2, 
-                  bgcolor: 'rgba(0, 51, 20, 0.04)', 
+                <Box sx={{
+                  ml: 4, mt: 1, mb: 2, p: 2,
+                  bgcolor: 'rgba(0, 51, 20, 0.04)',
                   borderRadius: 1,
                   borderLeft: '3px solid',
                   borderColor: 'primary.main'

@@ -7,6 +7,7 @@ import { AuthProvider } from './contexts/AuthContext';
 import AuthPage from './pages/AuthPage';
 import Dashboard from './pages/Dashboard';
 import VehicleHistory from './pages/VehicleHistory';
+import UpdatePassword from './pages/UpdatePassword';
 import ProtectedRoute from './components/ProtectedRoute';
 
 import { LocalizationProvider } from '@mui/x-date-pickers';
@@ -22,6 +23,7 @@ function App() {
           <BrowserRouter>
             <Routes>
               <Route path="/auth" element={<AuthPage />} />
+              <Route path="/update-password" element={<UpdatePassword />} />
 
               <Route element={<ProtectedRoute />}>
                 <Route path="/" element={<Dashboard />} />
